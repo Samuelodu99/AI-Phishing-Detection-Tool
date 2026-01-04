@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Phishing Detection Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0A1D37 0%, #1E3A5F 100%);
+            color: #E0E0E0;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0A1D37;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeOut 1s ease-in-out 2s forwards;
+        }
+
+        #loading-screen .shield-icon {
+            font-size: 4rem;
+            color: #00DDEB;
+            animation: spin 2s infinite linear;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; display: none; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        header {
+            background: rgba(10, 29, 55, 0.95);
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            color: #00DDEB;
+            text-shadow: 0 0 10px rgba(0, 221, 235, 0.7);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+        }
+
+        nav ul li a {
+            color: #E0E0E0;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        nav ul li a:hover, nav ul li a.active {
+            color: #00DDEB;
+            text-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            margin: 80px auto 0 auto;
+            max-width: 1200px;
+            display: flex;
+            gap: 2rem;
+        }
+
+        .profile-sidebar {
+            width: 30%;
+            background: rgba(30, 58, 95, 0.9);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .profile-pic {
+            max-width: 150px;
+            border-radius: 50%;
+            margin-bottom: 1rem;
+            border: 3px solid #00DDEB;
+        }
+
+        .profile-pic-placeholder {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .profile-pic-placeholder i {
+            font-size: 50px;
+            color: #00DDEB;
+        }
+
+        .user-info h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: #00DDEB;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+        }
+
+        .user-info p {
+            color: #B0B0B0;
+            margin: 0.25rem 0;
+            font-size: 1rem;
+        }
+
+        .profile-content {
+            width: 70%;
+            background: rgba(30, 58, 95, 0.9);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .profile-content h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: #00DDEB;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 10혹px rgba(0, 221, 235, 0.5);
+        }
+
+        .profile-content h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            color: #00DDEB;
+            margin: 1.5rem 0 1rem;
+            text-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+        }
+
+        .flash-messages {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1500;
+        }
+
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 5px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: slideIn 0.5s ease forwards, fadeOutFlash 0.5s ease 4s forwards;
+        }
+
+        .flash-success {
+            background: #00DDEB;
+        }
+
+        .flash-error {
+            background: #FF5555;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOutFlash {
+            from { opacity: 1; }
+            to { opacity: 0; display: none; }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 1rem;
+        }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #E0E0E0;
+        }
+
+        .form-group input {
+            padding: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #E0E0E0;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #00DDEB;
+            box-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+        }
+
+        .form-group input[type="file"] {
+            padding: 0.5rem 0;
+        }
+
+        .form-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 0.5rem;
+        }
+
+        .form-group button {
+            background: #00DDEB;
+            color: #0A1D37;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease, transform 0.1s ease;
+        }
+
+        .form-group button:hover {
+            background: #00C4D1;
+            transform: scale(1.05);
+        }
+
+        .form-group a {
+            color: #00DDEB;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .form-group a:hover {
+            color: #FF5555;
+        }
+
+        .profile-pic-preview {
+            max-width: 150px;
+            border-radius: 50%;
+            margin-top: 10px;
+            border: 3px solid #00DDEB;
+        }
+
+        footer {
+            background: rgba(10, 29, 55, 0.95);
+            padding: 1rem;
+            text-align: center;
+            color: #E0E0E0;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        footer p a {
+            color: #00DDEB;
+            text-decoration: none;
+        }
+
+        footer p a:hover {
+            text-decoration: underline;
+        }
+
+        footer .social-links {
+            margin-top: 1rem;
+        }
+
+        footer .social-links a {
+            color: #00DDEB;
+            margin: 0 0.5rem;
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+        }
+
+        footer .social-links a:hover {
+            color: #FF5555;
+        }
+
+        @media (max-width: 768px) {
+            header .logo { font-size: 1.4rem; }
+            nav ul {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background: rgba(10, 29, 55, 0.95);
+                padding: 1rem;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            }
+            nav ul.active { display: flex; }
+            nav ul li { margin: 0.5rem 0; }
+            main {
+                flex-direction: column;
+                padding: 1rem;
+                margin-top: 120px;
+            }
+            .profile-sidebar, .profile-content {
+                width: 100%;
+            }
+            .profile-pic, .profile-pic-preview {
+                max-width: 120px;
+            }
+            .profile-pic-placeholder {
+                width: 120px;
+                height: 120px;
+            }
+            .profile-pic-placeholder i {
+                font-size: 40px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header .logo { font-size: 1.2rem; }
+            .profile-content h2 { font-size: 1.8rem; }
+            .profile-content h3 { font-size: 1.5rem; }
+            .form-group input, .form-group button { font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <i class="fas fa-shield-alt shield-icon"></i>
+    </div>
+    <div id="particles"></div>
+    <header>
+        <div class="logo">Phishing Detection Tool</div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}" aria-label="Go to Home page">Home</a></li>
+                <li><a href="{{ url_for('past_results') }}" aria-label="View past analysis results">Past Results</a></li>
+                <li><a href="{{ url_for('about') }}" aria-label="Learn more about this tool">About</a></li>
+                <li><a href="{{ url_for('contact') }}" aria-label="Contact us">Contact</a></li>
+                {% if session.get('user_id') %}
+                <li><a href="{{ url_for('profile') }}" class="active" aria-label="View your profile">Profile</a></li>
+                {% if is_admin %}
+                <li><a href="{{ url_for('admin_dashboard') }}" aria-label="Access admin dashboard">Admin</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('logout') }}" aria-label="Log out of your account">Logout</a></li>
+                {% else %}
+                <li><a href="{{ url_for('signup') }}" aria-label="Sign up for an account">Sign Up</a></li>
+                <li><a href="{{ url_for('login') }}" aria-label="Log in to your account">Login</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div class="profile-sidebar">
+            {% if profile_picture and file_exists %}
+            <img src="{{ profile_picture }}" alt="Profile Picture" class="profile-pic">
+            {% else %}
+            <div class="profile-pic-placeholder">
+                <i class="fas fa-user"></i>
+            </div>
+            {% endif %}
+            <div class="user-info">
+                <h3>{{ username }}</h3>
+                <p>{{ email }}</p>
+                {% if name %}
+                <p>{{ name }}</p>
+                {% endif %}
+                {% if phone %}
+                <p>{{ phone }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="profile-content">
+            <h2>Profile Settings</h2>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">
+                    <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <h3>Update Profile Information</h3>
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="update_profile">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" name="name" id="name" placeholder="Enter your name" value="{{ name }}">
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone</label>
+                    <input type="text" name="phone" id="phone" placeholder="Enter your phone number" value="{{ phone }}">
+                </div>
+                <div class="form-group full-width">
+                    <label for="email">Email</label>
+                    <input type="email" name="email" id="email" placeholder="Enter your email" value="{{ email }}" required>
+                </div>
+                <div class="form-group full-width">
+                    <label for="profile_picture">Profile Picture</label>
+                    <input type="file" name="profile_picture" id="profile_picture" accept="image/png,image/jpeg,image/gif">
+                    <img id="profile-pic-preview" class="profile-pic-preview" style="display: none;" alt="Profile Picture Preview">
+                </div>
+                {% if profile_picture and file_exists %}
+                <div class="form-group full-width">
+                    <label>
+                        <input type="checkbox" name="remove_picture"> Remove Profile Picture
+                    </label>
+                </div>
+                {% endif %}
+                <div class="form-group full-width">
+                    <button type="submit">Save Profile</button>
+                </div>
+                <div class="form-group full-width">
+                    <a href="{{ url_for('index') }}">Back to Home</a>
+                </div>
+            </form>
+
+            <h3>Change Password</h3>
+            <form method="POST">
+                <input type="hidden" name="action" value="change_password">
+                <div class="form-group">
+                    <label for="current_password">Current Password</label>
+                    <input type="password" name="current_password" id="current_password" placeholder="Enter your current password" required>
+                </div>
+                <div class="form-group">
+                    <label for="new_password">New Password</label>
+                    <input type="password" name="new_password" id="new_password" placeholder="Enter your new password">
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">Confirm New Password</label>
+                    <input type="password" name="confirm_password" id="confirm_password" placeholder="Confirm your new password">
+                </div>
+                <div class="form-group full-width">
+                    <button type="submit">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2025 Phishing Detection Tool | Final Year Project by Samuel Odu</p>
+        <div class="social-links">
+            <a href="https://github.com/yourusername" target="_blank" aria-label="Visit GitHub profile"><i class="fab fa-github"></i></a>
+            <a href="https://linkedin.com/in/yourusername" target="_blank" aria-label="Visit LinkedIn profile"><i class="fab fa-linkedin"></i></a>
+            <a href="https://twitter.com/yourusername" target="_blank" aria-label="Visit Twitter profile"><i class="fab fa-twitter"></i></a>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script>
+        particlesJS('particles', {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#00DDEB"
+                },
+                "shape": {
+                    "type": "circle",
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": true,
+                },
+                "size": {
+                    "value": 3,
+                    "random": true,
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#00DDEB",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 2,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false,
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "repulse"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                },
+            },
+            "retina_detect": true
+        });
+
+        function previewProfilePicture() {
+            const input = document.getElementById('profile_picture');
+            const file = input.files[0];
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
+            const maxSize = 2 * 1024 * 1024; // 2MB
+
+            if (file) {
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Invalid file type. Please upload a PNG, JPG, JPEG, or GIF image.');
+                    input.value = '';
+                    return;
+                }
+                if (file.size > maxSize) {
+                    alert('File too large. Maximum size allowed is 2MB.');
+                    input.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('profile-pic-preview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        window.onload = function() {
+            document.getElementById('loading-screen').style.display = 'flex';
+            document.getElementById('profile_picture').addEventListener('change', previewProfilePicture);
+        };
+    </script>
+</body>
+</html>

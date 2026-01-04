@@ -1,0 +1,5 @@
+Subject: Your Invoice from PayPal
+Hello Jane,
+Here’s your recent invoice. View it here: https://paypal.com/invoice/12345
+Thanks,
+PayPal Team

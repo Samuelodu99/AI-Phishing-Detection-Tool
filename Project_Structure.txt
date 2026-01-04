@@ -1,0 +1,6 @@
+phishing_tool/
+├── app.py          # Main Flask app
+├── templates/      # HTML templates
+│   └── index.html  # Main page
+├── static/         # CSS (optional)
+└── uploads/        # Store uploaded files

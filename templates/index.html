@@ -1,0 +1,1158 @@
+<script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+        return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                    row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                    headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+    }
+</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Detection Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <!-- Tailwind CSS should be set up locally for production. Follow these steps:
+         1. Run `npm init -y` and `npm install -D tailwindcss postcss autoprefixer`
+         2. Run `npx tailwindcss init -p` to generate tailwind.config.js and postcss.config.js
+         3. Configure tailwind.config.js with content: ["./**/*.html"]
+         4. Add @tailwind directives in a new styles.css file: @tailwind base; @tailwind components; @tailwind utilities;
+         5. Link the compiled CSS in the <head> (e.g., <link rel="stylesheet" href="/dist/output.css">)
+         6. Run `npx tailwindcss -i ./styles.css -o ./dist/output.css --watch` to compile -->
+    <link rel="stylesheet" href="/dist/output.css">
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0A1D37 0%, #1E3A5F 100%);
+            color: #E0E0E0;
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0A1D37;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeOut 1s ease-in-out 2s forwards;
+        }
+
+        #loading-screen .shield-icon {
+            font-size: 4rem;
+            color: #00DDEB;
+            animation: spin 2s infinite linear;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; display: none; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        header {
+            background: rgba(10, 29, 55, 0.95);
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            color: #00DDEB;
+            text-shadow: 0 0 10px rgba(0, 221, 235, 0.7);
+        }
+
+        header nav ul {
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            font-weight: 600;
+        }
+
+        header nav ul li a {
+            color: #E0E0E0;
+            text-decoration: none;
+            padding: 0.5rem 0.75rem;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+
+        header nav ul li a:hover {
+            color: #00DDEB;
+            text-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+        }
+
+        .hamburger {
+            display: none;
+            font-size: 1.5rem;
+            color: #E0E0E0;
+            cursor: pointer;
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%2300DDEB' fill-opacity='0.2' d='M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,128C960,160,1056,224,1152,224C1248,224,1344,160,1392,128L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E") no-repeat bottom center;
+            background-size: cover;
+            animation: wave 10s linear infinite;
+        }
+
+        @keyframes wave {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-1440px); }
+        }
+
+        .hero-text {
+            text-align: center;
+            padding: 4rem 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .hero-text h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+
+        .hero-text p {
+            font-size: 1.125rem;
+            color: #B0B0B0;
+            margin-bottom: 2rem;
+        }
+
+        .animated-gradient-text {
+            background: linear-gradient(90deg, #00DDEB, #00C4D1, #00DDEB);
+            background-size: 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0%; }
+            100% { background-position: 200%; }
+        }
+
+        .glowing-cta {
+            box-shadow: 0 0 15px rgba(0, 221, 235, 0.5);
+            transition: all 0.3s ease;
+            display: inline-block;
+            background-color: #00DDEB;
+            color: #0A1D37;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+        }
+
+        .glowing-cta:hover {
+            box-shadow: 0 0 25px rgba(0, 221, 235, 0.8);
+            transform: scale(1.05);
+        }
+
+        .form-container {
+            background: rgba(30, 58, 95, 0.9);
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .form-container:hover {
+            box-shadow: 0 0 20px rgba(0, 221, 235, 0.5);
+        }
+
+        .form-container.dragover {
+            transform: scale(1.02);
+            background: rgba(0, 221, 235, 0.1);
+            box-shadow: 0 0 20px rgba(0, 221, 235, 0.8);
+        }
+
+        .form-container input[type="file"] {
+            display: none;
+        }
+
+        .upload-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: #00DDEB;
+            color: #0A1D37;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+
+        .upload-button:hover {
+            background-color: #00C4D1;
+        }
+
+        .upload-icon {
+            font-size: 1.2rem;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .drag-drop-label {
+            color: #B0B0B0;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .file-preview {
+            margin-top: 1rem;
+            color: #00DDEB;
+            font-size: 0.875rem;
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .demo-button {
+            margin-top: 1rem;
+            background-color: #00DDEB;
+            color: #0A1D37;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+
+        .demo-button:hover {
+            background-color: #00C4D1;
+        }
+
+        #loading {
+            margin-top: 1rem;
+            color: #00DDEB;
+            display: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 2rem;
+            height: 2rem;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #00DDEB;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        main {
+            flex: 1;
+            padding: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: 2rem;
+            min-height: 400px;
+        }
+
+        .grid-cols-1 {
+            grid-template-columns: 1fr;
+        }
+
+        .grid-cols-\[1fr_2fr\] {
+            grid-template-columns: 1fr 2fr;
+        }
+
+        .error {
+            color: #FF5555;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .flash-messages {
+            position: fixed;
+            top: 1.25rem;
+            right: 1.25rem;
+            z-index: 1500;
+        }
+
+        .flash-message {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            color: white;
+        }
+
+        .bg-\[#00DDEB\] {
+            background-color: #00DDEB;
+        }
+
+        .bg-\[#FF5555\] {
+            background-color: #FF5555;
+        }
+
+        .animate-\[slideIn_0\.5s_ease_forwards\,fadeOutFlash_0\.5s_ease_4s_forwards\] {
+            animation: slideIn 0.5s ease forwards, fadeOutFlash 0.5s ease 4s forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOutFlash {
+            from { opacity: 1; }
+            to { opacity: 0; display: none; }
+        }
+
+        .result {
+            background: rgba(30, 58, 95, 0.9);
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .result:hover {
+            transform: translateY(-4px);
+        }
+
+        .result h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: #00DDEB;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            text-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+        }
+
+        .result p {
+            margin-bottom: 0.5rem;
+        }
+
+        .result strong {
+            font-weight: 600;
+        }
+
+        .risk-gauge {
+            width: 100%;
+            height: 1.25rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            margin: 0.5rem 0;
+            overflow: hidden;
+        }
+
+        .gauge-bar {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.5s ease;
+        }
+
+        .bg-green-500 {
+            background-color: #22c55e;
+        }
+
+        .bg-orange-500 {
+            background-color: #f97316;
+        }
+
+        .bg-red-500 {
+            background-color: #ef4444;
+        }
+
+        .result h3 {
+            font-family: 'Orbitron', sans-serif;
+            color: #00DDEB;
+            margin-top: 1rem;
+        }
+
+        .result table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.75rem;
+        }
+
+        .result th {
+            padding: 0.75rem;
+            background: #00DDEB;
+            color: #0A1D37;
+            font-weight: 600;
+        }
+
+        .result td {
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .result a {
+            display: inline-block;
+            margin-top: 1rem;
+            background: #00DDEB;
+            color: #0A1D37;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .result a:hover {
+            background: #00C4D1;
+        }
+
+        .feature-card {
+            transition: all 0.3s ease;
+            background: rgba(30, 58, 95, 0.9);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 0 20px rgba(0, 221, 235, 0.5);
+        }
+
+        .feature-card i {
+            color: #00DDEB;
+            font-size: 1.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h4 {
+            font-size: 1.25rem;
+            color: #E0E0E0;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            color: #B0B0B0;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .features-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .section {
+            padding: 4rem 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section h3 {
+            font-family: 'Orbitron', sans-serif;
+            color: #00DDEB;
+            font-size: 2.25rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 221, 235, 0.5);
+        }
+
+        .how-it-works ol {
+            list-style: none;
+            counter-reset: step-counter;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .how-it-works li {
+            counter-increment: step-counter;
+            position: relative;
+            padding-left: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .how-it-works li.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .how-it-works li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            width: 2rem;
+            height: 2rem;
+            background: #00DDEB;
+            color: #0A1D37;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .how-it-works li p {
+            color: #B0B0B0;
+        }
+
+        .stat-card {
+            background: rgba(30, 58, 95, 0.9);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #00DDEB;
+            transition: all 2s ease;
+        }
+
+        .stat-card p {
+            color: #B0B0B0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .activity-ticker {
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 0.75rem;
+        }
+
+        .ticker-items {
+            display: flex;
+            animation: ticker 20s linear infinite;
+        }
+
+        .activity-ticker:hover .ticker-items {
+            animation-play-state: paused;
+        }
+
+        @keyframes ticker {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .ticker-items span {
+            display: inline-block;
+            padding: 0 2rem;
+            white-space: nowrap;
+            color: #B0B0B0;
+        }
+
+        footer {
+            background: rgba(10, 29, 55, 0.95);
+            padding: 1rem;
+            text-align: center;
+            color: #E0E0E0;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        footer a {
+            color: #00DDEB;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .social-links {
+            margin-top: 1rem;
+        }
+
+        .social-links a {
+            color: #00DDEB;
+            margin: 0 0.5rem;
+            font-size: 1.125rem;
+            transition: all 0.3s ease;
+        }
+
+        .social-links a:hover {
+            color: #00DDEB;
+            text-shadow: 0 0 10px rgba(0, 221, 235, 0.5);
+        }
+
+        .newsletter-form {
+            margin-top: 1rem;
+        }
+
+        .newsletter-form p {
+            margin-bottom: 0.5rem;
+        }
+
+        .newsletter-form div {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .newsletter-form input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #00DDEB;
+            color: #E0E0E0;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .newsletter-form button {
+            background: #00DDEB;
+            color: #0A1D37;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+
+        .newsletter-form button:hover {
+            background: #00C4D1;
+        }
+
+        @media (max-width: 768px) {
+            .hamburger {
+                display: block;
+            }
+
+            header nav ul {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background: rgba(10, 29, 55, 0.95);
+                padding: 1rem;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            }
+
+            header nav ul.active {
+                display: flex;
+            }
+
+            header nav ul li {
+                margin: 0.5rem 0;
+            }
+
+            .hero-text h2 {
+                font-size: 2rem;
+            }
+
+            .hero-text p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <i class="fas fa-shield-alt shield-icon"></i>
+    </div>
+
+    <div id="particles"></div>
+
+    <header>
+        <div class="logo">
+            Phishing Detection Tool
+        </div>
+        <nav>
+            <div class="hamburger">
+                <i class="fas fa-bars"></i>
+            </div>
+            <ul>
+                <li><a href="{{ url_for('index') }}" class="active" aria-label="Go to Home page">Home</a></li>
+                <li><a href="{{ url_for('past_results') }}" aria-label="View past analysis results">Past Results</a></li>
+                <li><a href="{{ url_for('about') }}" aria-label="Learn more about this tool">About</a></li>
+                <li><a href="{{ url_for('contact') }}" aria-label="Contact us">Contact</a></li>
+                <li><a href="{{ url_for('profile') }}" aria-label="View your profile">Profile</a></li>
+                {% if is_admin %}
+                <li><a href="{{ url_for('admin_dashboard') }}" aria-label="Access admin dashboard">Admin</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('logout') }}" aria-label="Log out of your account">Logout</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="hero-text">
+            <h2 class="animated-gradient-text">Shield Your Digital World</h2>
+            <p>Advanced AI-powered detection to safeguard your emails and documents from phishing threats.</p>
+            <a href="/about" class="glowing-cta" aria-label="Learn more about the tool">Learn More</a>
+        </div>
+    </section>
+
+    <main class="{% if result %}grid-cols-[1fr_2fr]{% else %}grid-cols-1{% endif %}">
+        <div class="form-container">
+            <form method="POST" enctype="multipart/form-data">
+                <input type="file" name="file" id="fileInput" required aria-label="Select a file to upload">
+                <button type="button" id="uploadBtn" class="upload-button">
+                    <i class="fas fa-upload upload-icon"></i> Upload Document
+                </button>
+                <div class="drag-drop-label">or Drag & Drop</div>
+            </form>
+            <div id="filePreview" class="file-preview"></div>
+            <button type="button" id="demoBtn" class="demo-button">Try a Demo</button>
+            <div id="loading">
+                <span class="spinner"></span> Analyzing...
+            </div>
+        </div>
+
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash-message {% if category == 'success' %}bg-[#00DDEB]{% else %}bg-[#FF5555]{% endif %} animate-[slideIn_0.5s_ease_forwards,fadeOutFlash_0.5s_ease_4s_forwards]">
+                <i class="fas {% if category == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if result %}
+            <div class="result">
+                <h2>Analysis Result</h2>
+                <p><strong>Risk Score:</strong> <span id="risk-score-value">{{ result.risk_score }}/100</span></p>
+                <div class="risk-gauge">
+                    <div class="gauge-bar {% if result.risk_score < 50 %}bg-green-500{% elif result.risk_score < 80 %}bg-orange-500{% else %}bg-red-500{% endif %}" style="width: {{ result.risk_score }}%;"></div>
+                </div>
+                <p><strong>Evidence:</strong> {{ result.evidence }}</p>
+                <p><strong>Tip:</strong> {{ result.tip }}</p>
+                {% if result.breakdown %}
+                    <h3>Score Breakdown</h3>
+                    <table>
+                        <tr>
+                            <th>Indicator</th>
+                        </tr>
+                        {% for item in result.breakdown %}
+                            <tr>
+                                <td>{{ item }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
+                {% if result.urls %}
+                    <p><strong>URLs Validated:</strong> {{ result.urls|join(', ') }}</p>
+                {% endif %}
+                {% if result.domains %}
+                    <p><strong>Domains Validated:</strong> {{ result.domains|join(', ') }}</p>
+                {% endif %}
+                <a href="/download_result/{{ filename }}" aria-label="Download analysis result as text file">Download Result</a>
+            </div>
+        {% endif %}
+    </main>
+
+    <section class="section features">
+        <div class="features">
+            <h3>Core Features</h3>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h4>AI-Powered Detection</h4>
+                    <p>High-accuracy phishing detection using advanced AI algorithms.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-file-upload"></i>
+                    <h4>Seamless Upload</h4>
+                    <p>Upload files effortlessly with drag-and-drop functionality.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-history"></i>
+                    <h4>Analysis History</h4>
+                    <p>Review past scans to track your security progress.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-lightbulb"></i>
+                    <h4>Practical Insights</h4>
+                    <p>Receive actionable tips to enhance your digital safety.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section how-it-works">
+        <div class="how-it-works">
+            <h3>How It Works</h3>
+            <ol>
+                <li><p>Upload your email or document via the form.</p></li>
+                <li><p>Our AI scans for phishing indicators.</p></li>
+                <li><p>Get a detailed risk report and safety tips.</p></li>
+                <li><p>Download or review your analysis history.</p></li>
+            </ol>
+        </div>
+    </section>
+
+    <section class="section stats">
+        <div class="stats">
+            <h3>Our Impact</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="number" data-target="10000">0</span>
+                    <p>Scans Performed</p>
+                </div>
+                <div class="stat-card">
+                    <span class="number" data-target="5000">0</span>
+                    <p>Threats Blocked</p>
+                </div>
+                <div class="stat-card">
+                    <span class="number" data-target="98">0</span>
+                    <p>Detection Accuracy</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section activity">
+        <div class="activity">
+            <h3>Recent Activity</h3>
+            <div class="activity-ticker">
+                <div class="ticker-items">
+                    <span>User scanned a document - Risk Score: 45</span>
+                    <span>User scanned an email - Risk Score: 82</span>
+                    <span>User scanned a document - Risk Score: 10</span>
+                    <span>User scanned an email - Risk Score: 65</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2025 Phishing Detection Tool | Final Year Project by Samuel Odu | <a href="/cdn-cgi/l/email-protection#b98a8c8989968b8db98991908a9190979e9d9c8d9c9a8d9096978d969695d79a9694">Contact Us</a></p>
+        <div class="social-links">
+            <a href="https://github.com/yourusername" target="_blank" aria-label="Visit GitHub profile"><i class="fab fa-github"></i></a>
+            <a href="https://linkedin.com/in/yourusername" target="_blank" aria-label="Visit LinkedIn profile"><i class="fab fa-linkedin"></i></a>
+            <a href="https://twitter.com/yourusername" target="_blank" aria-label="Visit Twitter profile"><i class="fab fa-twitter"></i></a>
+        </div>
+        <div class="newsletter-form">
+            <p>Stay Updated with Our Newsletter</p>
+            <div>
+                <input type="email" placeholder="Enter your email">
+                <button>Subscribe</button>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script>
+        particlesJS('particles', {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#00DDEB"
+                },
+                "shape": {
+                    "type": "circle",
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": true,
+                },
+                "size": {
+                    "value": 3,
+                    "random": true,
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#00DDEB",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 2,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false,
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "repulse"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                },
+            },
+            "retina_detect": true
+        });
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('uploadBtn').disabled = true;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            document.querySelector('.form-container').classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            document.querySelector('.form-container').classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            document.querySelector('.form-container').classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const form = document.querySelector('form');
+                const input = document.querySelector('#fileInput');
+                input.files = files;
+                document.getElementById('filePreview').textContent = `Selected: ${files[0].name}`;
+                showLoading();
+                form.submit();
+            }
+        }
+
+        function showDemoResult() {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = `
+                <h2>Demo Analysis Result</h2>
+                <p><strong>Risk Score:</strong> <span id="risk-score-value">75/100</span></p>
+                <div class="risk-gauge">
+                    <div class="gauge-bar bg-orange-500" style="width: 75%;"></div>
+                </div>
+                <p><strong>Evidence:</strong> Suspicious URL detected: "http://fakesite.com"</p>
+                <p><strong>Tip:</strong> Avoid clicking on links from unknown sources.</p>
+                <h3>Score Breakdown</h3>
+                <table>
+                    <tr><th>Indicator</th></tr>
+                    <tr><td>Unknown domain</td></tr>
+                    <tr><td>Spelling errors</td></tr>
+                </table>
+            `;
+            const main = document.querySelector('main');
+            const existingResult = main.querySelector('.result');
+            if (existingResult) {
+                main.removeChild(existingResult);
+            }
+            main.appendChild(resultDiv);
+            updateRiskDisplay();
+        }
+
+        function updateRiskDisplay() {
+            const scoreElement = document.getElementById('risk-score-value');
+            const gaugeBar = document.querySelector('.gauge-bar');
+            {% if result %}
+                const score = {{ result.risk_score }};
+                if (scoreElement && gaugeBar) {
+                    scoreElement.textContent = `${score}/100`;
+                    gaugeBar.style.width = `${score}%`;
+                    gaugeBar.className = 'gauge-bar ' + (score < 50 ? 'bg-green-500' : score < 80 ? 'bg-orange-500' : 'bg-red-500');
+                }
+            {% else %}
+                if (scoreElement && gaugeBar) {
+                    scoreElement.textContent = `0/100`;
+                    gaugeBar.style.width = `0%`;
+                    gaugeBar.className = 'gauge-bar bg-green-500';
+                }
+            {% endif %}
+        }
+
+        window.onload = function() {
+            document.getElementById('loading-screen').style.display = 'flex';
+
+            const dropZone = document.querySelector('.form-container');
+            dropZone.addEventListener('dragover', handleDragOver);
+            dropZone.addEventListener('dragleave', handleDragLeave);
+            dropZone.addEventListener('drop', handleDrop);
+
+            document.getElementById('uploadBtn').addEventListener('click', () => {
+                document.getElementById('fileInput').click();
+            });
+
+            document.getElementById('fileInput').addEventListener('change', () => {
+                const fileInput = document.getElementById('fileInput');
+                if (fileInput.files.length > 0) {
+                    document.getElementById('filePreview').textContent = `Selected: ${fileInput.files[0].name}`;
+                    showLoading();
+                    document.querySelector('form').submit();
+                }
+            });
+
+            document.getElementById('demoBtn').addEventListener('click', showDemoResult);
+
+            const hamburger = document.querySelector('.hamburger');
+            const navMenu = document.querySelector('header nav ul');
+            hamburger.addEventListener('click', () => {
+                navMenu.classList.toggle('active');
+            });
+
+            const sections = document.querySelectorAll('.section');
+            const howItWorksItems = document.querySelectorAll('.how-it-works li');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        if (entry.target.classList.contains('stats')) {
+                            document.querySelectorAll('.number').forEach(number => {
+                                const target = parseInt(number.getAttribute('data-target'));
+                                let count = 0;
+                                const increment = target / 100;
+                                const updateCount = () => {
+                                    if (count < target) {
+                                        count += increment;
+                                        number.textContent = Math.round(count);
+                                        setTimeout(updateCount, 20);
+                                    } else {
+                                        number.textContent = target;
+                                    }
+                                };
+                                updateCount();
+                            });
+                        }
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            sections.forEach(section => observer.observe(section));
+            howItWorksItems.forEach(item => observer.observe(item));
+
+            {% if result %}
+                updateRiskDisplay();
+            {% endif %}
+        };
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93a74db0fe08c020',t:'MTc0NjM1NDQyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+echo "test" > fake_pdf.exe
+ren fake_pdf.exe fake_pdf.pdf

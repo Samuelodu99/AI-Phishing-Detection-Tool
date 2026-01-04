@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Phishing Detection Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0A1D37 0%, #1E3A5F 100%);
+            color: #E0E0E0;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0A1D37;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeOut 1s ease-in-out 2s forwards;
+        }
+
+        #loading-screen .shield-icon {
+            font-size: 4rem;
+            color: #00DDEB;
+            animation: spin 2s infinite linear;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; display: none; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            animation: float 10s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) scale(0.5); opacity: 0; }
+            50% { opacity: 0.5; }
+            100% { transform: translateY(-100vh) scale(1); opacity: 0; }
+        }
+
+        header {
+            background: rgba(10, 29, 55, 0.9);
+            backdrop-filter: blur(5px);
+            color: #E0E0E0;
+            padding: 1rem 2rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            background: linear-gradient(90deg, #00DDEB, #FF00FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hamburger {
+            display: none;
+            font-size: 1.5rem;
+            background: none;
+            border: none;
+            color: #E0E0E0;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .hamburger:hover {
+            color: #00DDEB;
+        }
+
+        nav {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        nav a {
+            color: #E0E0E0;
+            text-decoration: none;
+            font-weight: 600;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        nav a:hover {
+            color: #00DDEB;
+        }
+
+        nav a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #00DDEB, #FF00FF);
+            left: 0;
+            bottom: -4px;
+            transition: width 0.3s ease;
+        }
+
+        nav a:hover::after {
+            width: 100%;
+        }
+
+        nav a:focus {
+            outline: 2px solid #00DDEB;
+            outline-offset: 2px;
+            border-radius: 2px;
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 500px;
+            margin: 80px auto 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .auth-container {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.1));
+            backdrop-filter: blur(15px);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: fadeIn 0.5s ease-in;
+            width: 100%;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .auth-container:hover {
+            transform: translateY(-5px) rotateX(5deg) rotateY(5deg);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .auth-container h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            background: linear-gradient(90deg, #00DDEB, #FF00FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .auth-container form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .auth-container input {
+            padding: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #E0E0E0;
+            font-size: 1rem;
+            min-height: 44px; /* Touch-friendly */
+        }
+
+        .auth-container input:focus {
+            outline: none;
+            border-color: #00DDEB;
+            box-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+        }
+
+        .auth-container button {
+            background: linear-gradient(90deg, #00DDEB, #FF00FF);
+            color: #FFF;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            min-height: 44px; /* Touch-friendly */
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .auth-container button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .auth-container button:hover::before {
+            left: 100%;
+        }
+
+        .auth-container button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 221, 235, 0.5);
+        }
+
+        .auth-container p {
+            margin-top: 1rem;
+            color: #B0B0B0;
+        }
+
+        .auth-container a {
+            color: #00DDEB;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-container a:hover {
+            color: #FF00FF;
+        }
+
+        .flash-message {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 16px;
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+        }
+        .flash-success {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.5);
+        }
+        .flash-error {
+            background-color: rgba(255, 85, 85, 0.2);
+            color: #FF5555;
+            border: 1px solid rgba(255, 85, 85, 0.5);
+        }
+        .flash-hidden {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        footer {
+            background: rgba(10, 29, 55, 0.9);
+            backdrop-filter: blur(5px);
+            color: #E0E0E0;
+            text-align: center;
+            padding: 1rem;
+            margin-top: 2rem;
+            box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        footer p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        footer .social-links {
+            margin-top: 0.5rem;
+        }
+
+        footer .social-links a {
+            color: #00DDEB;
+            margin: 0 0.5rem;
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+        }
+
+        footer .social-links a:hover {
+            color: #FF00FF;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            header {
+                padding: 0.5rem 1rem;
+                flex-wrap: wrap;
+            }
+            header h1 {
+                font-size: 1.2rem;
+                max-width: 70%;
+            }
+            .hamburger {
+                display: block;
+                font-size: 1.2rem;
+            }
+            nav {
+                display: none;
+                position: absolute;
+                top: 60px;
+                left: 0;
+                width: 100%;
+                background: rgba(10, 29, 55, 0.95);
+                flex-direction: column;
+                padding: 0.5rem;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            }
+            nav.active {
+                display: flex;
+            }
+            nav a {
+                margin: 0.5rem 0;
+                font-size: 0.9rem;
+                padding: 0.5rem 0;
+            }
+            main {
+                padding: 1rem;
+                margin-top: 80px;
+            }
+            .auth-container {
+                padding: 1rem;
+            }
+            .auth-container h2 {
+                font-size: 1.5rem;
+            }
+            .auth-container input, .auth-container button {
+                padding: 0.5rem;
+                font-size: 0.9rem;
+                min-height: 44px;
+            }
+            footer {
+                padding: 0.5rem;
+            }
+            footer p {
+                font-size: 0.8rem;
+            }
+            footer .social-links a {
+                font-size: 1rem;
+                margin: 0 0.3rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 1rem;
+            }
+            .hamburger {
+                font-size: 1rem;
+            }
+            nav a {
+                font-size: 0.8rem;
+            }
+            .auth-container h2 {
+                font-size: 1.2rem;
+            }
+            .auth-container input, .auth-container button {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+    <script>
+        function createParticles() {
+            const isMobile = window.innerWidth <= 768;
+            const particleCount = isMobile ? 20 : 50; // Fewer on mobile
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                particle.style.width = `${Math.random() * 5 + 2}px`;
+                particle.style.height = particle.style.width;
+                particle.style.left = `${Math.random() * 100}vw`;
+                particle.style.animationDelay = `${Math.random() * 5}s`;
+                particle.style.animationDuration = `${Math.random() * 10 + 5}s`;
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        function toggleMenu() {
+            const nav = document.querySelector('nav');
+            nav.classList.toggle('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(message => {
+                setTimeout(() => {
+                    message.classList.add('flash-hidden');
+                }, 5000);
+            });
+            document.querySelector('.hamburger').addEventListener('click', toggleMenu);
+        });
+
+        window.onload = function() {
+            createParticles();
+            document.getElementById('loading-screen').style.display = 'flex';
+        };
+    </script>
+</head>
+<body>
+    <div id="loading-screen">
+        <i class="fas fa-shield-alt shield-icon"></i>
+    </div>
+    <div id="particles"></div>
+    <header>
+        <h1>Phishing Detection and Awareness Tool</h1>
+        <button class="hamburger" aria-label="Toggle navigation menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        <nav>
+            <a href="{{ url_for('index') }}" aria-label="Go to Home page">Home</a>
+            <a href="{{ url_for('past_results') }}" aria-label="View past analysis results">Past Results</a>
+            <a href="{{ url_for('about') }}" aria-label="Learn more about this tool">About Us</a>
+            <a href="{{ url_for('contact') }}" aria-label="Contact us">Contact</a>
+            {% if session.get('user_id') %}
+                <a href="{{ url_for('profile') }}" aria-label="View your profile">Profile</a>
+                <a href="{{ url_for('logout') }}" aria-label="Log out of your account">Logout</a>
+            {% else %}
+                <a href="{{ url_for('signup') }}" aria-label="Sign up for an account">Sign Up</a>
+                <a href="{{ url_for('login') }}" aria-label="Log in to your account">Login</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+        <div class="auth-container">
+            <h2>Sign Up</h2>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ 'flash-' + category }}" id="flash-{{ loop.index }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <form method="POST">
+                <input type="text" name="username" placeholder="Username" required>
+                <input type="email" name="email" placeholder="Email" required>
+                <input type="text" name="name" placeholder="Name (optional)">
+                <input type="text" name="phone" placeholder="Phone (optional)">
+                <input type="password" name="password" placeholder="Password" required>
+                <input type="password" name="confirm_password" placeholder="Confirm Password" required>
+                <button type="submit">Sign Up</button>
+            </form>
+            <p>Already have an account? <a href="{{ url_for('login') }}">Log in here</a>.</p>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2025 Phishing Detection Tool | Final Year Project by Samuel Odu</p>
+        <div class="social-links">
+            <a href="https://github.com/yourusername" target="_blank" aria-label="Visit GitHub profile"><i class="fab fa-github"></i></a>
+            <a href="https://linkedin.com/in/yourusername" target="_blank" aria-label="Visit LinkedIn profile"><i class="fab fa-linkedin"></i></a>
+            <a href="https://twitter.com/yourusername" target="_blank" aria-label="Visit Twitter profile"><i class="fab fa-twitter"></i></a>
+        </div>
+    </footer>
+</body>
+</html>

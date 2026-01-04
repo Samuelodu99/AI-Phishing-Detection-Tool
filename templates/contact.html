@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us - Phishing Detection Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0A1D37 0%, #1E3A5F 100%);
+            color: #E0E0E0;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0A1D37;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeOut 1s ease-in-out 2s forwards;
+        }
+
+        #loading-screen .shield-icon {
+            font-size: 4rem;
+            color: #00DDEB;
+            animation: spin 2s infinite linear;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; display: none; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        header {
+            background: rgba(10, 29, 55, 0.95);
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            color: #00DDEB;
+            text-shadow: 0 0 10px rgba(0, 221, 235, 0.7);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+        }
+
+        nav ul li a {
+            color: #E0E0E0;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        nav ul li a:hover, nav ul li a.active {
+            color: #00DDEB;
+            text-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 80px;
+            text-align: center;
+        }
+
+        .contact-container {
+            background: rgba(30, 58, 95, 0.9);
+            padding: 3rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .contact-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .contact-container h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: #00DDEB;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 10px rgba(0, 221, 235, 0.5);
+        }
+
+        .contact-container p {
+            font-size: 1.1rem;
+            color: #B0B0B0;
+            margin-bottom: 2rem;
+        }
+
+        .contact-container form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .contact-container input,
+        .contact-container textarea {
+            padding: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #E0E0E0;
+            font-size: 1rem;
+        }
+
+        .contact-container input:focus,
+        .contact-container textarea:focus {
+            outline: none;
+            border-color: #00DDEB;
+            box-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+        }
+
+        .contact-container textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .contact-container button {
+            background: #00DDEB;
+            color: #0A1D37;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease, transform 0.1s ease;
+        }
+
+        .contact-container button:hover {
+            background: #00C4D1;
+            transform: scale(1.05);
+        }
+
+        .success-message {
+            color: #00DDEB;
+            margin-top: 1rem;
+            font-weight: 600;
+        }
+
+        .flash-messages {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1500;
+        }
+
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 5px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: slideIn 0.5s ease forwards, fadeOutFlash 0.5s ease 4s forwards;
+        }
+
+        .flash-success {
+            background: #00DDEB;
+        }
+
+        .flash-error {
+            background: #FF5555;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOutFlash {
+            from { opacity: 1; }
+            to { opacity: 0; display: none; }
+        }
+
+        footer {
+            background: rgba(10, 29, 55, 0.95);
+            padding: 1rem;
+            text-align: center;
+            color: #E0E0E0;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        footer p a {
+            color: #00DDEB;
+            text-decoration: none;
+        }
+
+        footer p a:hover {
+            text-decoration: underline;
+        }
+
+        footer .social-links {
+            margin-top: 1rem;
+        }
+
+        footer .social-links a {
+            color: #00DDEB;
+            margin: 0 0.5rem;
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+        }
+
+        footer .social-links a:hover {
+            color: #FF5555;
+        }
+
+        @media (max-width: 768px) {
+            header .logo { font-size: 1.4rem; }
+            nav ul {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background: rgba(10, 29, 55, 0.95);
+                padding: 1rem;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            }
+            nav ul.active { display: flex; }
+            nav ul li { margin: 0.5rem 0; }
+            main { padding: 1rem; margin-top: 120px; }
+            .contact-container { padding: 1.5rem; }
+        }
+
+        @media (max-width: 480px) {
+            header .logo { font-size: 1.2rem; }
+            .contact-container h2 { font-size: 1.8rem; }
+            .contact-container p { font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <i class="fas fa-shield-alt shield-icon"></i>
+    </div>
+    <div id="particles"></div>
+    <header>
+        <div class="logo">Phishing Detection Tool</div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}" aria-label="Go to Home page">Home</a></li>
+                <li><a href="{{ url_for('past_results') }}" aria-label="View past analysis results">Past Results</a></li>
+                <li><a href="{{ url_for('about') }}" aria-label="Learn more about this tool">About</a></li>
+                <li><a href="{{ url_for('contact') }}" class="active" aria-label="Contact us">Contact</a></li>
+                {% if session.get('user_id') %}
+                <li><a href="{{ url_for('profile') }}" aria-label="View your profile">Profile</a></li>
+                {% if is_admin %}
+                <li><a href="{{ url_for('admin_dashboard') }}" aria-label="Access admin dashboard">Admin</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('logout') }}" aria-label="Log out of your account">Logout</a></li>
+                {% else %}
+                <li><a href="{{ url_for('signup') }}" aria-label="Sign up for an account">Sign Up</a></li>
+                <li><a href="{{ url_for('login') }}" aria-label="Log in to your account">Login</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div class="contact-container">
+            <h2>Contact Us</h2>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">
+                    <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+            <p>Have questions or feedback? We'd love to hear from you!</p>
+            {% if success %}
+            <p class="success-message">Thank you for your message! We'll get back to you soon.</p>
+            {% else %}
+            <div>
+                <input type="text" name="name" placeholder="Your Name" required>
+                <input type="email" name="email" placeholder="Your Email" required>
+                <textarea name="message" placeholder="Your Message" required></textarea>
+                <button type="button" onclick="alert('Form submission is disabled in this environment. Please use the live application to submit the form.')">Send Message</button>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2025 Phishing Detection Tool | Final Year Project by Samuel Odu</p>
+        <div class="social-links">
+            <a href="https://github.com/yourusername" target="_blank" aria-label="Visit GitHub profile"><i class="fab fa-github"></i></a>
+            <a href="https://linkedin.com/in/yourusername" target="_blank" aria-label="Visit LinkedIn profile"><i class="fab fa-linkedin"></i></a>
+            <a href="https://twitter.com/yourusername" target="_blank" aria-label="Visit Twitter profile"><i class="fab fa-twitter"></i></a>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script>
+        particlesJS('particles', {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#00DDEB"
+                },
+                "shape": {
+                    "type": "circle",
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": true,
+                },
+                "size": {
+                    "value": 3,
+                    "random": true,
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#00DDEB",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 2,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false,
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "repulse"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                },
+            },
+            "retina_detect": true
+        });
+
+        window.onload = function() {
+            document.getElementById('loading-screen').style.display = 'flex';
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,750 @@
+<script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+        return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                    row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                    headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+    }
+</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Past Results - Phishing Detection Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0A1D37 0%, #1E3A5F 100%);
+            color: #E0E0E0;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0A1D37;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeOut 1s ease-in-out 2s forwards;
+        }
+
+        #loading-screen .shield-icon {
+            font-size: 4rem;
+            color: #00DDEB;
+            animation: spin 2s infinite linear;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; display: none; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        header {
+            background: rgba(10, 29, 55, 0.95);
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            color: #00DDEB;
+            text-shadow: 0 0 10px rgba(0, 221, 235, 0.7);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+        }
+
+        nav ul li a {
+            color: #E0E0E0;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        nav ul li a:hover, nav ul li a.active {
+            color: #00DDEB;
+            text-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: #00DDEB;
+            text-align: center;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 10px rgba(0, 221, 235, 0.5);
+        }
+
+        .clear-btn-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 1rem;
+        }
+
+        button, .btn {
+            background: #00DDEB;
+            color: #0A1D37;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease, transform 0.1s ease;
+        }
+
+        button:hover, .btn:hover {
+            background: #00C4D1;
+            transform: scale(1.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(30, 58, 95, 0.9);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            background: #00DDEB;
+            color: #0A1D37;
+            font-weight: 600;
+        }
+
+        td {
+            color: #E0E0E0;
+            word-wrap: break-word;
+            max-width: 200px;
+        }
+
+        .risk-low {
+            color: #00FF00;
+        }
+
+        .risk-medium {
+            color: #FFA500;
+        }
+
+        .risk-high {
+            color: #FF0000;
+        }
+
+        .risk-bar {
+            height: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+
+        .details-btn, .feedback-btn {
+            background: none;
+            color: #00DDEB;
+            border: 1px solid #00DDEB;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            margin-right: 1rem; /* Increased spacing between buttons */
+            margin-bottom: 0.5rem; /* Added vertical spacing */
+            display: inline-block; /* Ensure proper spacing behavior */
+        }
+
+        .details-btn:hover, .feedback-btn:hover {
+            background: #00DDEB;
+            color: #0A1D37;
+        }
+
+        .evidence-summary {
+            color: #E0E0E0;
+        }
+
+        .evidence-toggle {
+            cursor: pointer;
+            color: #00DDEB;
+            text-decoration: underline;
+            margin-left: 5px;
+        }
+
+        .evidence-toggle:hover {
+            color: #FF5555;
+        }
+
+        .evidence-details {
+            display: none;
+            margin-top: 5px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+
+        .evidence-details.active {
+            display: block;
+        }
+
+        .evidence-details li {
+            margin-bottom: 5px;
+        }
+
+        .feedback-form {
+            margin-top: 0.5rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap; /* Allow wrapping for better responsiveness */
+        }
+
+        .feedback-form select {
+            padding: 0.5rem;
+            border-radius: 5px;
+            border: 1px solid #00DDEB;
+            background: #0A1D37;
+            color: #E0E0E0;
+        }
+
+        .feedback-form select:focus {
+            outline: none;
+            border-color: #00DDEB;
+        }
+
+        .feedback-cell {
+            color: #B0B0B0;
+            position: relative;
+        }
+
+        .feedback-help {
+            cursor: pointer;
+            color: #00DDEB;
+            text-decoration: underline;
+            margin-left: 5px;
+            font-size: 0.9rem;
+        }
+
+        .feedback-help:hover {
+            color: #FF5555;
+        }
+
+        .feedback-tooltip {
+            display: none;
+            position: absolute;
+            background: rgba(10, 29, 55, 0.95);
+            color: #E0E0E0;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+            width: 300px;
+            font-size: 0.9rem;
+        }
+
+        .feedback-tooltip.active {
+            display: block;
+        }
+
+        .breakdown-content {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+
+        footer {
+            background: rgba(10, 29, 55, 0.95);
+            padding: 1rem;
+            text-align: center;
+            color: #E0E0E0;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        footer p a {
+            color: #00DDEB;
+            text-decoration: none;
+        }
+
+        footer p a:hover {
+            text-decoration: underline;
+        }
+
+        footer .social-links {
+            margin-top: 1rem;
+        }
+
+        footer .social-links a {
+            color: #00DDEB;
+            margin: 0 0.5rem;
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+        }
+
+        footer .social-links a:hover {
+            color: #FF5555;
+        }
+
+        .flash-messages {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1500;
+        }
+
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 5px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: slideIn 0.5s ease forwards, fadeOutFlash 0.5s ease 4s forwards;
+        }
+
+        .flash-success {
+            background: #00DDEB;
+        }
+
+        .flash-error {
+            background: #FF5555;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOutFlash {
+            from { opacity: 1; }
+            to { opacity: 0; display: none; }
+        }
+
+        /* Pagination Styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 2rem;
+            gap: 0.5rem;
+        }
+
+        .pagination a, .pagination span {
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .pagination a {
+            background: #00DDEB;
+            color: #0A1D37;
+        }
+
+        .pagination a:hover {
+            background: #00C4D1;
+        }
+
+        .pagination span {
+            background: rgba(255, 255, 255, 0.1);
+            color: #E0E0E0;
+        }
+
+        .pagination .disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: #777;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+
+            .feedback-form {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .details-btn, .feedback-btn {
+                margin-right: 0.5rem;
+                margin-bottom: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <i class="fas fa-shield-alt shield-icon"></i>
+    </div>
+
+    <div id="particles"></div>
+
+    <header>
+        <div class="logo">Phishing Detection Tool</div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}" aria-label="Go to Home page">Home</a></li>
+                <li><a href="{{ url_for('past_results') }}" class="active" aria-label="View past analysis results">Past Results</a></li>
+                <li><a href="{{ url_for('about') }}" aria-label="Learn more about this tool">About</a></li>
+                <li><a href="{{ url_for('contact') }}" aria-label="Contact us">Contact</a></li>
+                <li><a href="{{ url_for('profile') }}" aria-label="View your profile">Profile</a></li>
+                {% if is_admin %}
+                <li><a href="{{ url_for('admin_dashboard') }}" aria-label="Access admin dashboard">Admin</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('logout') }}" aria-label="Log out of your account">Logout</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <h1>Past Results</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">
+                <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="clear-btn-container">
+            <form method="POST" action="{{ url_for('past_results') }}">
+                <input type="hidden" name="action" value="clear">
+                <button type="submit" onclick="return confirm('Are you sure you want to clear all past results?');">
+                    Clear Results
+                </button>
+            </form>
+        </div>
+
+        {% if results %}
+        <table>
+            <thead>
+                <tr>
+                    <th>File Name</th>
+                    <th>Risk Score</th>
+                    <th>Evidence</th>
+                    <th>Tip</th>
+                    <th>Timestamp</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results %}
+                {% set filename, risk_score, evidence, tip, timestamp, breakdown, result_id, feedback, user_id = result %}
+                <tr>
+                    <td>{{ filename }}</td>
+                    <td class="{% if risk_score < risk_threshold %}risk-low{% elif risk_score < high_risk_threshold %}risk-medium{% else %}risk-high{% endif %}">
+                        {{ risk_score }}/100
+                        <div class="risk-bar {% if risk_score < risk_threshold %}risk-low{% elif risk_score < high_risk_threshold %}risk-medium{% else %}risk-high{% endif %}" style="width: {{ risk_score }}%;"></div>
+                    </td>
+                    <td>
+                        {% set evidence_items = evidence.split('; ') %}
+                        <span class="evidence-summary">
+                            {{ evidence_items|length }} issue{% if evidence_items|length != 1 %}s{% endif %} detected
+                        </span>
+                        <span class="evidence-toggle" onclick="toggleEvidence('evidence-{{ result_id }}')">Show Details</span>
+                        <div id="evidence-{{ result_id }}" class="evidence-details">
+                            <ul>
+                                {% for item in evidence_items %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </td>
+                    <td>{{ tip }}</td>
+                    <td>{{ timestamp }}</td>
+                    <td class="feedback-cell">
+                        <button class="details-btn" onclick="toggleDetails('breakdown-{{ result_id }}')">Show Breakdown</button>
+                        <a href="{{ url_for('download_result', filename=filename) }}" class="details-btn">Download</a>
+                        {% if feedback %}
+                        <span>Feedback: {{ feedback }}</span>
+                        {% else %}
+                        <button class="feedback-btn" onclick="toggleFeedback('feedback-{{ result_id }}')">Add Feedback</button>
+                        <div id="feedback-{{ result_id }}" style="display: none;" class="feedback-form">
+                            <form method="POST" action="{{ url_for('submit_feedback', result_id=result_id) }}">
+                                <select name="feedback" onchange="this.form.submit()">
+                                    <option value="" disabled selected>Select Feedback</option>
+                                    <option value="correct">Correct</option>
+                                    <option value="false_positive">False Positive</option>
+                                    <option value="false_negative">False Negative</option>
+                                </select>
+                            </form>
+                            <span class="feedback-help" onclick="toggleFeedbackHelp('tooltip-{{ result_id }}')">Help</span>
+                            <div id="tooltip-{{ result_id }}" class="feedback-tooltip">
+                                <p><strong>False Positive:</strong> The system flagged a legitimate message as phishing (e.g., a safe email marked as dangerous).</p>
+                                <p><strong>False Negative:</strong> The system marked a phishing message as safe (e.g., a dangerous email marked as legitimate).</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div id="breakdown-{{ result_id }}" class="breakdown-content" style="display: none;">
+                            {{ breakdown }}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination Controls -->
+        <div class="pagination">
+            {% if page > 1 %}
+            <a href="{{ url_for('past_results', page=page-1) }}">Previous</a>
+            {% else %}
+            <span class="disabled">Previous</span>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <span>{{ p }}</span>
+            {% else %}
+            <a href="{{ url_for('past_results', page=p) }}">{{ p }}</a>
+            {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+            <a href="{{ url_for('past_results', page=page+1) }}">Next</a>
+            {% else %}
+            <span class="disabled">Next</span>
+            {% endif %}
+        </div>
+        {% else %}
+        <p>No past results available.</p>
+        {% endif %}
+    </main>
+
+    <footer>
+        <p>© 2025 Phishing Detection Tool | Final Year Project by Samuel Odu | <a href="/cdn-cgi/l/email-protection#f98a8c8989968b8db98991908a9190979e9d9c8d9c9a8d9096978d969695d79a9694">Contact Us</a></p>
+        <div class="social-links">
+            <a href="https://github.com/yourusername" target="_blank" aria-label="Visit GitHub profile"><i class="fab fa-github"></i></a>
+            <a href="https://linkedin.com/in/yourusername" target="_blank" aria-label="Visit LinkedIn profile"><i class="fab fa-linkedin"></i></a>
+            <a href="https://twitter.com/yourusername" target="_blank" aria-label="Visit Twitter profile"><i class="fab fa-twitter"></i></a>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script>
+        particlesJS('particles', {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#00DDEB"
+                },
+                "shape": {
+                    "type": "circle",
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": true,
+                },
+                "size": {
+                    "value": 3,
+                    "random": true,
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#00DDEB",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 2,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false,
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "repulse"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                },
+            },
+            "retina_detect": true
+        });
+
+        function toggleDetails(id) {
+            const element = document.getElementById(id);
+            if (element.style.display === 'none' || element.style.display === '') {
+                element.style.display = 'block';
+            } else {
+                element.style.display = 'none';
+            }
+        }
+
+        function toggleFeedback(id) {
+            const element = document.getElementById(id);
+            if (element.style.display === 'none' || element.style.display === '') {
+                element.style.display = 'block';
+            } else {
+                element.style.display = 'none';
+            }
+        }
+
+        function toggleEvidence(id) {
+            const element = document.getElementById(id);
+            const toggle = element.previousElementSibling;
+            if (element.classList.contains('active')) {
+                element.classList.remove('active');
+                toggle.textContent = 'Show Details';
+            } else {
+                element.classList.add('active');
+                toggle.textContent = 'Hide Details';
+            }
+        }
+
+        function toggleFeedbackHelp(id) {
+            const tooltip = document.getElementById(id);
+            const isActive = tooltip.classList.contains('active');
+            
+            // Hide all tooltips
+            document.querySelectorAll('.feedback-tooltip').forEach(t => t.classList.remove('active'));
+
+            // Toggle the clicked tooltip
+            if (!isActive) {
+                tooltip.classList.add('active');
+                const helpElement = tooltip.previousElementSibling;
+                const rect = helpElement.getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+                let top = rect.bottom + window.scrollY + 5;
+                let left = rect.left + window.scrollX;
+
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+
+                if (left + tooltipRect.width > viewportWidth - 10) {
+                    left = viewportWidth - tooltipRect.width - 10;
+                }
+                if (left < 10) {
+                    left = 10;
+                }
+
+                const bottomEdge = top + tooltipRect.height;
+                if (bottomEdge > viewportBottom - 10) {
+                    top = rect.top + window.scrollY - tooltipRect.height - 5;
+                }
+                if (top < window.scrollY + 10) {
+                    top = window.scrollY + 10;
+                }
+
+                tooltip.style.top = `${top}px`;
+                tooltip.style.left = `${left}px`;
+            }
+        }
+
+        window.onload = function() {
+            document.getElementById('loading-screen').style.display = 'flex';
+        };
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93a7bd287b86bd3e',t:'MTc0NjM1ODk5MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
